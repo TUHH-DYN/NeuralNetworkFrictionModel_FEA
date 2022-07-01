@@ -98,7 +98,7 @@ while true
     staticRes = solve(modelStatic);
 
     % Interpolate the y-displacement at the geometric center of the beam
-    delta = interpolateDisplacement(staticRes, [L; 0]).uy;
+    delta = interpolateDisplacement(staticRes, [L; 0.]).uy;
 
     numNodes(i) = size(modelStatic.Mesh.Nodes, 2);
     err(i) = abs(deltaRef-delta) / abs(deltaRef) * 100;

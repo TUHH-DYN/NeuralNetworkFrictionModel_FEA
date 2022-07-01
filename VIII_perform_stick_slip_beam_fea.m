@@ -1,4 +1,21 @@
-function [output] = performStickSlipBeamFEA(hmax, fmodelType, tfinal, dt, eps, beta)
+% Finite Element analysis of a 2D transient cantilever beam model
+
+%% Initialization
+clear
+close all
+
+% Load custom colormaps
+load("colors\viridis.mat")
+load("colors\Set1.mat")
+set(0, "DefaultAxesColorOrder", Set1)
+
+% Set parameter values
+hmax = 0.02;
+fmodelType = 'exponential';
+tfinal = 1.2;
+dt = 1e-4;
+eps = 1e-3;
+beta = 1e-2;
 
 %% Define friction model
 
@@ -202,7 +219,3 @@ save("output_hmax" + num2str(hmax) + ...
     "_dt" + num2str(dt) + ...
     "_eps" + num2str(eps) + ...
     "_b" + num2str(beta) + ".mat");
-
-output = 1;
-
-end
