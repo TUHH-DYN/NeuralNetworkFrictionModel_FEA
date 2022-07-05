@@ -11,7 +11,7 @@ set(0, "DefaultAxesColorOrder", Set1)
 
 % Set some parameter values
 hmax    = 0.02; % Target maximum element edge size  [m]
-tfinal  = 0.02; % Final time                        [s]
+tfinal  = 1.20; % Final time                        [s] % 0.13
 beta    = 1e-2;
 
 %% Define friction model
@@ -78,7 +78,8 @@ fprintf(' done.\n');
 %  Static results may be used as an initial condition for the Finite
 %  Element model according to a state just before the first stick-slip
 %  transition occurs. This procedure saves time by skipping the 'boring'
-%  first stick phase.
+%  first stick phase. It also avoids the breakaway point being a multiple
+%  of the time step size.
 
 fprintf('\nPerforming static analysis of the cantilever beam Finite Element model...');
 
@@ -96,17 +97,25 @@ structuralProperties(modelStatic, "YoungsModulus", E, "PoissonsRatio", nu, "Mass
 structuralBC(modelStatic, 'Edge', 4, 'Constraint', 'fixed');
 
 % Apply static vertical load at the right side of the beam
-structuralBoundaryLoad(modelStatic, 'Vertex', 2, 'Force', [0; 0.99*Fcrit]);
+structuralBoundaryLoad(modelStatic, 'Vertex', 2, 'Force', [0; 0.01*Fcrit]);
 
 % Solve static model
 staticRes = solve(modelStatic);
 
-fprintf(' done.\n');
+% Compute initial deflection
+deltaInit = interpolateDisplacement(staticRes, [L; 0.]).uy;
+
+fprintf(' done.\nThe initial deflection of the beam''s free end is %6.4e m.\n', deltaInit);
 
 %% Transient analysis
 %  This is the actual transient analysis of the stick-slip behaviour of a
 %  cantilever beam subjected to frictional contact with a moving conveyor
 %  belt at the free end.
+
+% Compute analytical solution
+deltaBreak = (Fcrit * L^3) / (3 * E * I);
+tBreak = deltaBreak/vbelt - deltaInit/vbelt;
+fprintf('The analytical breakaway point is %6.4e s, when the deflection is %6.4e m.\n\n', tBreak, deltaBreak);
 
 modelTransient.SolverOptions.ReportStatistics  = 'off';
 modelTransient.SolverOptions.AbsoluteTolerance = 1.e-6; % Default: 1e-6
@@ -115,12 +124,16 @@ modelTransient.SolverOptions.RelativeTolerance = 1.e-3; % Default: 1e-3
 figure
 sgtitle("Cantilever beam 2D transient Finite Element analysis")
 set(gcf, "WindowState", "maximized")
+drawnow
 
 fprintf('\nStarting time stepping convergence study...\n');
 
-for dt = [1e-3, 1e-4]
+transitionPoints = [];
+dtVec = [1e-3, 5e-4, 4e-4, 3e-4, 2e-4, 1e-4];
 
-    fprintf('\nPerforming transient analysis using time step size dt = %6.4f s...\n\n', dt);
+for dt = dtVec
+
+    fprintf('\nPerforming transient analysis using time step size dt = %6.4e s...\n\n', dt);
 
     % Create transient analysis model for 2-D plane-stress problem
     modelTransient = createpde("structural", "transient-planestress");
@@ -136,7 +149,7 @@ for dt = [1e-3, 1e-4]
     structuralBC(modelTransient, 'Edge', 4, 'Constraint', 'fixed');
 
     % Define initial conditions
-    % structuralIC(modelTransient, "Displacement", zeros(2,1), "Velocity", zeros(2,1)); % Zero ICs
+%     structuralIC(modelTransient, "Displacement", zeros(2,1), "Velocity", zeros(2,1)); % Zero ICs
     structuralIC(modelTransient, staticRes); % Initial deflection from static results
     
     % Set up time stepping
@@ -190,6 +203,7 @@ for dt = [1e-3, 1e-4]
     
                 % Stick -> Slip
                 fprintf("t = %6.4f s: transition stick -> slip\n", history.t(step+1));
+                transitionPoints = [transitionPoints, Freact];
                 slip = true;
                 structuralBC(modelTransient, "Vertex", 2, "YDisplacement", []);
                 structuralDamping(modelTransient, "Alpha", 0.0, "Beta", beta);
@@ -204,11 +218,13 @@ for dt = [1e-3, 1e-4]
             end
     
         elseif slip == true
-    
-            if (abs(vrel) < fmodel.eps) && (abs(Freact) < Fcrit)
+
+            if (vrel >= 0) && (abs(Freact) < Fcrit)
+%             if (abs(vrel) < fmodel.eps) && (abs(Freact) < Fcrit)
     
                 % Slip -> Stick
                 fprintf("t = %6.4f s: transition slip -> stick\n", history.t(step+1));
+                transitionPoints = [transitionPoints, vrel];
                 slip = false;
                 structuralDamping(modelTransient, "Alpha", 0.0, "Beta", 0.0);
                 structuralBoundaryLoad(modelTransient, "Vertex", 2, "Force", []);
@@ -231,7 +247,7 @@ for dt = [1e-3, 1e-4]
     
     end
 
-    fprintf('\nThe analysis for time step size dt = %6.4f s has been completed.\n', dt);
+    fprintf('\nThe analysis for time step size dt = %6.4e s has been completed.\n', dt);
     
     % Plot the time-series of the deflection of the beam's free end
     ax = subplot(2,2,1);
@@ -242,7 +258,6 @@ for dt = [1e-3, 1e-4]
     title({'y-displacement at the beam tip'})
     grid on
     drawnow
-    % TODO Append legend entry
     
     % Plot the phase portrait at the beam's free end
     ax = subplot(2,2,2);
@@ -253,6 +268,27 @@ for dt = [1e-3, 1e-4]
     title({'Phase portrait at the beam tip'})
     grid on
     drawnow
-    % TODO Append legend entry
 
 end
+
+% Add legends to plots
+ax = subplot(2,2,1);
+legend("dt = " + string(dtVec));
+
+ax = subplot(2,2,2);
+legend("dt = " + string(dtVec));
+
+% Plot convergence behavior for transition points
+ax = subplot(2,2,3);
+FreactTrans = transitionPoints(1:2:end);
+FreactErr = abs(abs(FreactTrans) - Fcrit) ./ abs(Fcrit) * 100;
+plot(ceil(tfinal ./ dtVec), FreactErr);
+hold on
+vrelTrans = transitionPoints(2:2:end);
+vrelErr = abs(vrelTrans) * 100;
+plot(ceil(tfinal ./ dtVec), vrelErr);
+xlabel("n_{steps} [-]")
+ylabel("e_{rel} [%]")
+title({'Time stepping convergence'})
+grid on
+legend("Transition point stick-slip", "Transition point slip-stick")
