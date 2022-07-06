@@ -1,4 +1,5 @@
-% Mesh convergence study for a 2D static cantilever beam Finite Element model
+% Mesh convergence study for a 2D static cantilever beam Finite Element
+% model
 
 %% Initialization
 clear

@@ -1,63 +1,107 @@
+% Generation of training and test data for neural network regression
+%
+% Note: requires function getFrictionForce.m
+
 clear
 close all
 
-% Define analytical friction model
-fmodel.type = 'exponential';    % Choose between 'exponential' and 'polynomial'
-fmodel.a    = 5.0;              % Control parameter for the negative gradient of the friction curve (default: 5.0)
-fmodel.v0   = 0.3;              % Reference velocity if exponential decay is used   (default: 0.3) 
-fmodel.musd = 2.5;              % Ratio static to dynamic fric coeff, mu_st/mu_d    (default: 2.5)
-fmodel.mud  = 0.2;              % Dynamic coeff of friction, mu_d                   (default: 0.2)
-fmodel.muv  = 0.001;            % Linear strengthening parameter                    (default: 0.001)
-fmodel.eps  = 1e-3;             % Threshold value for sliding velocity              (default: 1e-3)
+% Load custom colormaps
+load("colors\viridis.mat")
+load("colors\Set1.mat")
+set(0, "DefaultAxesColorOrder", Set1)
 
-vrel = (-1.0 : fmodel.eps : 1.0);   % Relative sliding velocity
-Fn   = 100;                         % Normal force (default: 100)
-[Fn_, vrel_] = meshgrid(Fn, vrel');
+% Set up figure
+figure
+sgtitle("Friction data sampling and partitioning")
+set(gcf, "WindowState", "maximized")
 
-% Unroll matrices to column vectors
-vrel_ = reshape(vrel_, [], 1);
-Fn_   = reshape(Fn_  , [], 1);
+% Set target normal force [N]
+Fn = 100.0;
 
-% Add noise to the input data
-sigma = 0.02; % Standard deviation set to 2%
-vrel_ = vrel_ + (sigma .* vrel_) .* randn(size(vrel_));
-Fn_ = Fn_ + (sigma .* Fn_) .* randn(size(Fn_));
+% Set number of data samples
+nsamp = 5000;
+
+% Set holdout value for data partitioning training/test
+holdout = 0.3;
+
+% Generate sample points for the relative sliding velocity according to
+% Gaussian distribution with zero mean in order to capture the friction
+% force discontinuity at the origin
+vs = normrnd(0, 0.5, [1, nsamp])';
+
+% Generate sample points for the normal force according to uniform
+% distribution around the target value of the noraml force
+Fn = unifrnd(0.98*Fn, 1.02*Fn, [1, nsamp])';
+
+% Set common friction parameters
+fmodel.mus = 0.5; % Static coefficient of friction
+fmodel.muk = 0.2; % Kinetic coefficient of friction
+
+%% Exponential friction model
+
+fmodel.type = 'exponential';
+fmodel.a = 5.0; % Control parameter for the negative gradient of the friction curve
 
 % Compute friction force
-Ff = getFrictionForce(Fn_, vrel_, fmodel);
-% Note: Noise should not be added to the output data in order to represent
-% the analytical friction model properly
+Ff = getFrictionForce(Fn, vs, fmodel);
 
-% Assemble data table
-data = table(Fn_, vrel_, Ff, VariableNames=["Fn", "vrel", "Ff"]);
+% Add some (normal distributed, zero mean) noise
+sigma = 0.02; % Standard deviation
+Ff = Ff + (sigma .* Ff) .* randn(size(Ff));
 
-data.Properties.Description = 'Friction data samples';
-data.Properties.VariableUnits = {'N', 'm/s', 'N'};
-data.Properties.VariableDescriptions{'Fn'  } = 'Normal force';
-data.Properties.VariableDescriptions{'vrel'} = 'Relative sliding velocity';
-data.Properties.VariableDescriptions{'Ff'  } = 'Kinetic friction force';
+% Assemble data tables
+dataFull = table(Fn, vs, Ff, VariableNames=["Fn", "vs", "Ff"]);
 
-% Plot the data
-figure
-scatter3(data, "Fn", "vrel", "Ff", "Marker", ".")
-xlabel("F_n [N]");
-ylabel("v_{rel} [m/s]");
-zlabel("F_f [N]");
-title("Friction data samples")
-subtitle("from " + fmodel.type + " friction model")
-% view([-90 0])
+dataFull.Properties.Description = 'Friction data samples';
+dataFull.Properties.VariableUnits = {'N', 'm/s', 'N'};
+dataFull.Properties.VariableDescriptions{'Fn'} = 'Normal force';
+dataFull.Properties.VariableDescriptions{'vs'} = 'Relative sliding velocity';
+dataFull.Properties.VariableDescriptions{'Ff'} = 'Kinetic friction force';
+
+% Split the data into training and test set
+rng("default") % For reproducibility of the data partition
+c = cvpartition(height(dataFull), "HoldOut", holdout);
+idxTrain  = training(c); % Training set indices
+idxTest   = test    (c); % Test set indices
+dataTrain = dataFull(idxTrain, :);
+dataTest  = dataFull(idxTest , :);
+
+% Plot the data samples
+ax = subplot(1,2,1);
+scatter3(dataTrain, "Fn", "vs", "Ff", "Marker", ".")
 hold on
+scatter3(dataTest,  "Fn", "vs", "Ff", "Marker", ".")
+xlabel("F_n [N]");
+ylabel("v_{s} [m/s]");
+zlabel("F_f [N]");
+title("Exponential friction model")
+view([110 15])
 
-% Add surface plot as reference
-Fn = linspace(min(Fn_), max(Fn_), 10);
-vrel = (min(vrel_) : fmodel.eps : max(vrel_));
-[Fn_, vrel_] = meshgrid(Fn, vrel');
+% Add analytical surface plot as reference
+Fn = linspace(min(Fn), max(Fn), 10);
+[Fn_, vrel_] = meshgrid(Fn, linspace(min(vs), max(vs), 1000)');
 Ff = getFrictionForce(Fn_, vrel_, fmodel);
 surf(Fn_, vrel_, Ff, "EdgeColor", "none", "FaceAlpha", 0.5);
+legend("Training data (" + num2str((1-holdout)*100) + " %)", ...
+           "Test data (" + num2str(   holdout *100) + " %)", ...
+           "Analytical friction model", "Location", "northeast")
+
+% Plot histogram
+ax = subplot(1,2,2);
+histogram(dataFull .vs, BinWidth=0.1, Normalization="probability");
+hold on
+histogram(dataTrain.vs, BinWidth=0.1, Normalization="probability");
+histogram(dataTest .vs, BinWidth=0.1, Normalization="probability");
+xlabel("v_{s} [m/s]");
+legend("Entire data set (100 %)", ...
+    "Training data (" + num2str((1-holdout)*100) + " %)", ...
+        "Test data (" + num2str(   holdout *100) + " %)")
 
 % Preview and summarize table
-head(data)
-summary(data)
+head   (dataFull)
+summary(dataFull)
 
 % Write data to file
-writetable(data, fmodel.type + "FrictionModelSamples.csv")
+writetable(dataFull,  fmodel.type + "_friction_model_samples_full.csv")
+writetable(dataTrain, fmodel.type + "_friction_model_samples_training.csv")
+writetable(dataTest,  fmodel.type + "_friction_model_samples_test.csv")

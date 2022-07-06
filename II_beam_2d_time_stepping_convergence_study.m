@@ -1,4 +1,7 @@
-% Time stepping convergence study for a 2D transient cantilever beam Finite Element model
+% Time stepping convergence study for a 2D transient cantilever beam Finite
+% Element model
+%
+% Note: requires function getFrictionForce.m
 
 %% Initialization
 clear
@@ -11,8 +14,8 @@ set(0, "DefaultAxesColorOrder", Set1)
 
 % Set some parameter values
 hmax    = 0.02; % Target maximum element edge size  [m]
-tfinal  = 1.20; % Final time                        [s] % 0.13
-beta    = 1e-2;
+tfinal  = 1.30; % Final time                        [s]
+beta    = 1e-2; % Damping
 
 %% Define friction model
 
@@ -24,13 +27,12 @@ Fn          = 100.0;        % Normal force  [N]
 fmodel.type = 'exponential';
 fmodel.a    = 5.0;          % Control parameter for the negative gradient of the friction curve
 fmodel.v0   = 0.3;          % Reference velocity if exponential decay is used
-fmodel.musd = 2.5;          % Ratio static to dynamic fric coeff, mu_st/mu_d
-fmodel.mud  = 0.2;          % Dynamic coeff of friction, mu_d
-fmodel.muv  = 0.001;        % Linear strengthening parameter
-fmodel.eps  = 1e-3;         % Threshold value for sliding velocity [m/s]
+fmodel.mus  = 0.5;          % Static coefficient of friction
+fmodel.muk  = 0.2;          % Kinetic coefficient of friction
+fmodel.eps  = 1e-4;         % Threshold value for sliding velocity [m/s]
 
 % Compute maximum static friction force
-Fcrit = Fn * fmodel.mud * fmodel.musd;
+Fcrit = Fn * fmodel.mus;
 
 %% Define geometry
 
@@ -42,37 +44,6 @@ x = [0.; L; L; 0.];
 y = [-h/2; -h/2; h/2; h/2];
 
 g = decsg([3, 4, x' y']');
-
-%% Modal analysis
-%  Modal results may be used for time integration during the slip phase in
-%  order to avoid the occurence of (spurious) high-frequency vibration
-%  components.
-
-fprintf('\nPerforming modal analysis of the cantilever beam Finite Element model...');
-
-% Create modal analysis model for 2-D plane-stress problem
-modelModal = createpde('structural', 'modal-planestress');
-
-% Create geometry
-geometryFromEdges(modelModal, g);
-
-% Create mesh
-mesh = generateMesh(modelModal, "Hmax", hmax);
-
-% Define material properties
-E   = 2e11;     % Young's modulus   [Pa]
-nu  = 0.3;      % Poisson's ratio   [-]
-rho = 1000.;    % Mass density      [kg/m^3]
-
-structuralProperties(modelModal, "YoungsModulus", E, "PoissonsRatio", nu, "MassDensity", rho);
-
-% Specify left edge of the beam as fixed boundary
-structuralBC(modelModal, "Edge", 4, "Constraint", "fixed");
-
-% Solve problem for given frequency range
-modalRes = solve(modelModal, 'FrequencyRange', [-0.1, 1e4]');
-
-fprintf(' done.\n');
 
 %% Static analysis
 %  Static results may be used as an initial condition for the Finite
@@ -86,9 +57,16 @@ fprintf('\nPerforming static analysis of the cantilever beam Finite Element mode
 % Create static analysis model for 2-D plane-stress problem
 modelStatic = createpde('structural', 'static-planestress');
 
-% Use same geometry and mesh
+% Create geometry
 geometryFromEdges(modelStatic, g);
-modelStatic.Mesh = mesh;
+
+% Create mesh
+mesh = generateMesh(modelStatic, "Hmax", hmax);
+
+% Define material properties
+E   = 2e11;     % Young's modulus   [Pa]
+nu  = 0.3;      % Poisson's ratio   [-]
+rho = 1000.;    % Mass density      [kg/m^3]
 
 % Specify material properties
 structuralProperties(modelStatic, "YoungsModulus", E, "PoissonsRatio", nu, "MassDensity", rho); 
@@ -176,11 +154,7 @@ for dt = dtVec
         tListTmp = [step-1 step] .* tStep;
     
         % Solve structural model for current time fraction
-        if slip == false
-            rhs = solve(modelTransient, tListTmp);
-        else
-            rhs = solve(modelTransient, tListTmp, "ModalResults", modalRes);
-        end
+        rhs = solve(modelTransient, tListTmp);
     
         % Append partial solution to global solution vectors
         history.t (step+1) = rhs.SolutionTimes(end);
@@ -219,8 +193,8 @@ for dt = dtVec
     
         elseif slip == true
 
-            if (vrel >= 0) && (abs(Freact) < Fcrit)
-%             if (abs(vrel) < fmodel.eps) && (abs(Freact) < Fcrit)
+%            if (vrel >= 0) && (abs(Freact) < Fcrit)
+            if (abs(vrel) < fmodel.eps) && (abs(Freact) < Fcrit)
     
                 % Slip -> Stick
                 fprintf("t = %6.4f s: transition slip -> stick\n", history.t(step+1));
@@ -239,7 +213,7 @@ for dt = dtVec
                 Ff = getFrictionForce(Fn, vrel, fmodel);
                 history.Fy(step+1) = Ff;
     
-                structuralBoundaryLoad(modelTransient, "Vertex", 2, "Force", [0. Ff]);
+                structuralBoundaryLoad(modelTransient, "Vertex", 2, "Force", [0. -Ff]);
     
             end
     
@@ -271,24 +245,33 @@ for dt = dtVec
 
 end
 
-% Add legends to plots
+%% Add legends to plots
 ax = subplot(2,2,1);
-legend("dt = " + string(dtVec));
+legend("dt = " + string(dtVec) + " s", "Location", "southeast");
 
 ax = subplot(2,2,2);
-legend("dt = " + string(dtVec));
+legend("dt = " + string(dtVec) + " s");
+xlim([0.004 0.0096])
+ylim([-0.12 0.04])
 
-% Plot convergence behavior for transition points
+% Plot convergence behavior for stick-slip transition points
 ax = subplot(2,2,3);
-FreactTrans = transitionPoints(1:2:end);
+FreactTrans = transitionPoints(transitionPoints < -45);
 FreactErr = abs(abs(FreactTrans) - Fcrit) ./ abs(Fcrit) * 100;
 plot(ceil(tfinal ./ dtVec), FreactErr);
-hold on
-vrelTrans = transitionPoints(2:2:end);
+xlabel("n_{steps} [-]")
+ylabel("e_{rel} [%]")
+title({'Stick-slip transition points error'})
+grid on
+legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
+
+% Plot convergence behavior for slip-stick transition points
+ax = subplot(2,2,4);
+vrelTrans = transitionPoints(transitionPoints > -1);
 vrelErr = abs(vrelTrans) * 100;
 plot(ceil(tfinal ./ dtVec), vrelErr);
 xlabel("n_{steps} [-]")
-ylabel("e_{rel} [%]")
-title({'Time stepping convergence'})
+ylabel("e_{rel}=|v_s^t| [%]")
+title({'Slip-stick transition points error'})
 grid on
-legend("Transition point stick-slip", "Transition point slip-stick")
+legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
