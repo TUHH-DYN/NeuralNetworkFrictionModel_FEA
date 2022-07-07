@@ -27,6 +27,7 @@ holdout = 0.3;
 % Generate sample points for the relative sliding velocity according to
 % Gaussian distribution with zero mean in order to capture the friction
 % force discontinuity at the origin
+rng("default") % For reproducibility
 vs = normrnd(0, 0.5, [1, nsamp])';
 
 % Generate sample points for the normal force according to uniform
@@ -126,7 +127,6 @@ cdfplot(dataTrain.Ff);
 cdfplot(dataTest.Ff);
 ylabel('emperical cumulative probability [-]');
 title('outputs')
-
 xlabel("F_{f} [N]");
 legend("Entire data set (100 %)", ...
     "Training data (" + num2str((1-holdout)*100) + " %)", ...

@@ -58,7 +58,7 @@ optrnet = fitrnet(dataTrain, "Ff", ...
 % neural network model:
 % optrnet = 
 %   RegressionNeuralNetwork
-%               Activations: tanh'
+%               Activations: 'tanh'
 %                    Lambda: 4.534e-05
 %                LayerSizes: [3 296]
 %               Standardize: true
