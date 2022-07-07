@@ -50,7 +50,7 @@ sigma = 0.02; % Standard deviation
 Ff = Ff + (sigma .* Ff) .* randn(size(Ff));
 
 % Assemble data tables
-dataFull = table(Fn, vs, Ff, VariableNames=["Fn", "vs", "Ff"]);
+dataFull = table(Fn, vs, Ff, 'VariableNames', ["Fn", "vs", "Ff"]);
 
 dataFull.Properties.Description = 'Friction data samples';
 dataFull.Properties.VariableUnits = {'N', 'm/s', 'N'};
@@ -67,10 +67,10 @@ dataTrain = dataFull(idxTrain, :);
 dataTest  = dataFull(idxTest , :);
 
 % Plot the data samples
-ax = subplot(1,2,1);
-scatter3(dataTrain, "Fn", "vs", "Ff", "Marker", ".")
+ax = subplot(1,4,[1:2]);
+scatter3(dataTrain.Fn, dataTrain.vs, dataTrain.Ff, "Marker", ".")
 hold on
-scatter3(dataTest,  "Fn", "vs", "Ff", "Marker", ".")
+scatter3(dataTest.Fn, dataTest.vs, dataTest.Ff, "Marker", ".")
 xlabel("F_n [N]");
 ylabel("v_{s} [m/s]");
 zlabel("F_f [N]");
@@ -87,15 +87,51 @@ legend("Training data (" + num2str((1-holdout)*100) + " %)", ...
            "Analytical friction model", "Location", "northeast")
 
 % Plot histogram
-ax = subplot(1,2,2);
-histogram(dataFull .vs, BinWidth=0.1, Normalization="probability");
-hold on
-histogram(dataTrain.vs, BinWidth=0.1, Normalization="probability");
-histogram(dataTest .vs, BinWidth=0.1, Normalization="probability");
+ax = subplot(1,4,3);
+
+% -- ecpdf
+cdfplot(dataFull.vs); hold on; 
+cdfplot(dataTrain.vs); 
+cdfplot(dataTest.vs);
+ylabel('emperical cumulative probability [-]');
+title('inputs')
+
+% -- envelope of histogram
+% [counts, edges] = histcounts(dataFull.vs, 50, 'Normalization', "probability"); locs = movmean(edges, 2, 'Endpoints', 'discard');
+% plot(locs, counts, 'LineWidth', 2); hold on;
+% 
+% [counts, edges] = histcounts(dataTrain.vs, 50, 'Normalization', "probability"); locs = movmean(edges, 2, 'Endpoints', 'discard');
+% plot(locs, counts, 'LineWidth', 2);
+% 
+% [counts, edges] = histcounts(dataTest.vs, 50, 'Normalization', "probability"); locs = movmean(edges, 2, 'Endpoints', 'discard');
+% plot(locs, counts, 'LineWidth', 2);
+
+% -- histogram
+% histogram(dataFull.vs, 'BinWidth',0.1, 'Normalization', "probability", 'faceAlpha', 0.2, 'EdgeCOlor', 'k'); %'DisplayStyle','stairs');
+% hold on
+% histogram(dataTrain.vs, 'BinWidth', 0.1, 'Normalization',"probability", 'faceAlpha', 0.2); %, 'DisplayStyle','stairs');
+% histogram(dataTest.vs, 'BinWidth', 0.1, 'Normalization', "probability", 'faceAlpha', 0.2); %, 'DisplayStyle','stairs');
+
 xlabel("v_{s} [m/s]");
 legend("Entire data set (100 %)", ...
     "Training data (" + num2str((1-holdout)*100) + " %)", ...
-        "Test data (" + num2str(   holdout *100) + " %)")
+        "Test data (" + num2str(   holdout *100) + " %)", ...
+        "Location", "northwest")
+
+ax = subplot(1,4,4);
+
+% -- ecpdf
+cdfplot(dataFull.Ff); hold on; 
+cdfplot(dataTrain.Ff); 
+cdfplot(dataTest.Ff);
+ylabel('emperical cumulative probability [-]');
+title('outputs')
+
+xlabel("F_{f} [N]");
+legend("Entire data set (100 %)", ...
+    "Training data (" + num2str((1-holdout)*100) + " %)", ...
+        "Test data (" + num2str(   holdout *100) + " %)", ...
+        "Location", "northwest")
 
 % Preview and summarize table
 head   (dataFull)

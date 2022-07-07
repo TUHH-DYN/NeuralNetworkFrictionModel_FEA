@@ -75,7 +75,7 @@ structuralProperties(modelStatic, "YoungsModulus", E, "PoissonsRatio", nu, "Mass
 structuralBC(modelStatic, 'Edge', 4, 'Constraint', 'fixed');
 
 % Apply static vertical load at the right side of the beam
-structuralBoundaryLoad(modelStatic, 'Vertex', 2, 'Force', [0; 0.01*Fcrit]);
+structuralBoundaryLoad(modelStatic, 'Vertex', 2, 'Force', [0; 0.99*Fcrit]);
 
 % Solve static model
 staticRes = solve(modelStatic);
@@ -104,10 +104,10 @@ sgtitle("Cantilever beam 2D transient Finite Element analysis")
 set(gcf, "WindowState", "maximized")
 drawnow
 
-fprintf('\nStarting time stepping convergence study...\n');
+fprintf('Starting time stepping convergence study...\n');
 
 transitionPoints = [];
-dtVec = [1e-3, 5e-4, 4e-4, 3e-4, 2e-4, 1e-4];
+dtVec = [1e-4];
 
 for dt = dtVec
 
@@ -129,7 +129,10 @@ for dt = dtVec
     % Define initial conditions
 %     structuralIC(modelTransient, "Displacement", zeros(2,1), "Velocity", zeros(2,1)); % Zero ICs
     structuralIC(modelTransient, staticRes); % Initial deflection from static results
-    
+
+    % Introduce damping
+    damping = structuralDamping(modelTransient, "Beta", beta);
+
     % Set up time stepping
     tStart  = 0.0;
     tEnd    = tfinal;
@@ -168,9 +171,7 @@ for dt = dtVec
         vy = (history.uy(step+1)-history.uy(step)) / tStep;
         vrel = vy - vbelt;
     
-        % Update initial conditions
-        structuralIC(modelTransient, rhs);
-    
+        % Adjust boundary conditions
         if slip == false
     
             if abs(Freact) >= Fcrit
@@ -180,7 +181,7 @@ for dt = dtVec
                 transitionPoints = [transitionPoints, Freact];
                 slip = true;
                 structuralBC(modelTransient, "Vertex", 2, "YDisplacement", []);
-                structuralDamping(modelTransient, "Alpha", 0.0, "Beta", beta);
+                structuralDamping(modelTransient, "Beta", beta);
               
             else
     
@@ -200,7 +201,7 @@ for dt = dtVec
                 fprintf("t = %6.4f s: transition slip -> stick\n", history.t(step+1));
                 transitionPoints = [transitionPoints, vrel];
                 slip = false;
-                structuralDamping(modelTransient, "Alpha", 0.0, "Beta", 0.0);
+                structuralDamping(modelTransient, "Beta", 0.0);
                 structuralBoundaryLoad(modelTransient, "Vertex", 2, "Force", []);
                 structuralBC(modelTransient, "Vertex", 2, "YDisplacement", history.uy(step+1)+vbelt*tStep);
     
@@ -218,6 +219,9 @@ for dt = dtVec
             end
     
         end
+
+        % Update initial conditions
+        structuralIC(modelTransient, rhs);
     
     end
 
