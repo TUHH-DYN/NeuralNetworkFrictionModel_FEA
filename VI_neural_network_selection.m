@@ -16,12 +16,14 @@ dataTest  = readtable("exponential_friction_model_samples_test.csv");
 
 %% Consider vanilla type regression neural network
 
+rng("default") % For reproducibility
+
 % Create vanilla (default) regression neural network model
 vanillarnet = fitrnet(dataTrain, "Ff");
 
 % Compute the mean squared error of the vanilla model on the test data set
 testMSE = loss(vanillarnet, dataTest, "Ff");
-fprintf('The mean squared error of the optimized model in the test data set is %6.4f.\n', testMSE);
+fprintf('The mean squared error of the vanilla model on the test data set is %6.4f.\n', testMSE);
 
 %% Perform hyperparameter optimization for regression neural network
 %
