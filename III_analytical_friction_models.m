@@ -43,7 +43,7 @@ title('Exponential friction model')
 xlabel('v_{s} [m/s]')
 ylabel('\mu [-]')
 xlim([0.0, max(vs)])
-ylim([0.0, 1.1*fmodel.mus])
+ylim([0.0, 1.2*fmodel.mus])
 grid on
 
 yyaxis right
@@ -51,7 +51,7 @@ plot(vs, +fmodel.muk*ones(size(vs)), '--')
 plot(vs, -fmodel.muk*ones(size(vs)), '--')
 plot(vs, +fmodel.mus*ones(size(vs)), '--')
 plot(vs, -fmodel.mus*ones(size(vs)), '--')
-ylim([0.0, 1.1*fmodel.mus])
+ylim([0.0, 1.2*fmodel.mus])
 yticks([-fmodel.mus, -fmodel.muk, fmodel.muk, fmodel.mus])
 yticklabels({'-\mu_s', '-\mu_k', '\mu_k', '\mu_s'})
 
@@ -64,7 +64,7 @@ plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
 xlabel('v_{s} [m/s]')
 ylabel('F_{f} [N]')
 xlim([min(vs), max(vs)])
-ylim([-1.1*Fcrit, 1.1*Fcrit])
+ylim([-1.2*Fcrit, 1.2*Fcrit])
 grid on
 
 yyaxis right
@@ -72,7 +72,7 @@ plot(vs, +Fn*fmodel.muk*ones(size(vs)), '--')
 plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--')
 plot(vs, +Fn*fmodel.mus*ones(size(vs)), '--')
 plot(vs, -Fn*fmodel.mus*ones(size(vs)), '--')
-ylim([-1.1*Fcrit, 1.1*Fcrit])
+ylim([-1.2*Fcrit, 1.2*Fcrit])
 yticks([-Fn*fmodel.mus, -Fn*fmodel.muk, Fn*fmodel.muk, Fn*fmodel.mus])
 yticklabels({'-F_n \mu_s', '-F_n \mu_k', 'F_n \mu_k', 'F_n \mu_s'})
 
@@ -97,7 +97,7 @@ title('Polynomial friction model')
 xlabel('v_{s} [m/s]')
 ylabel('\mu [-]')
 xlim([0.0, max(vs)])
-ylim([0.0, 1.1*fmodel.mus])
+ylim([0.0, 1.2*fmodel.mus])
 grid on
 
 yyaxis right
@@ -105,7 +105,7 @@ plot(vs, +fmodel.muk*ones(size(vs)), '--')
 plot(vs, -fmodel.muk*ones(size(vs)), '--')
 plot(vs, +fmodel.mus*ones(size(vs)), '--')
 plot(vs, -fmodel.mus*ones(size(vs)), '--')
-ylim([0.0, 1.1*fmodel.mus])
+ylim([0.0, 1.2*fmodel.mus])
 yticks([-fmodel.mus, -fmodel.muk, fmodel.muk, fmodel.mus])
 yticklabels({'-\mu_s', '-\mu_k', '\mu_k', '\mu_s'})
 
@@ -120,7 +120,7 @@ xticklabels({-0.9, -0.6, '-v_0 = -0.3', 0, 'v_0 = 0.3', 0.6, 0.9})
 xlabel('v_{s} [m/s]')
 ylabel('F_{f} [N]')
 xlim([min(vs), max(vs)])
-ylim([-1.1*Fcrit, 1.1*Fcrit])
+ylim([-1.2*Fcrit, 1.2*Fcrit])
 grid on
 
 yyaxis right
@@ -128,6 +128,6 @@ plot(vs, +Fn*fmodel.muk*ones(size(vs)), '--')
 plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--')
 plot(vs, +Fn*fmodel.mus*ones(size(vs)), '--')
 plot(vs, -Fn*fmodel.mus*ones(size(vs)), '--')
-ylim([-1.1*Fcrit, 1.1*Fcrit])
+ylim([-1.2*Fcrit, 1.2*Fcrit])
 yticks([-Fn*fmodel.mus, -Fn*fmodel.muk, Fn*fmodel.muk, Fn*fmodel.mus])
 yticklabels({'-F_n \mu_s', '-F_n \mu_k', 'F_n \mu_k', 'F_n \mu_s'})
