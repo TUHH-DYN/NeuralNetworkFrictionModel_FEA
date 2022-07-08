@@ -1,7 +1,19 @@
-% Time stepping convergence study for a 2D transient cantilever beam Finite
-% Element model
+% Time stepping convergence study
 %
-% Note: requires function getFrictionForce.m
+% This script performs a time stepping convergence study for a 2D transient
+% cantilever beam Finite Element model.
+%
+% Requires: function getFrictionForce.m
+%
+% Author: Kerstin Vater, MSc
+% Machine Learning Dynamics Group (M-14)
+% Hamburg University of Technology
+% Am Schwarzenberg-Campus 1
+% 21073 Hamburg, Germany
+% E-mail: kerstin.vater@tuhh.de  
+% URL: https://www.tuhh.de/dyn
+
+%------------- BEGIN CODE --------------
 
 %% Initialization
 clear
@@ -279,3 +291,5 @@ ylabel("e_{rel}=|v_s^t| [%]")
 title({'Slip-stick transition points error'})
 grid on
 legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
+
+%------------- END OF CODE --------------

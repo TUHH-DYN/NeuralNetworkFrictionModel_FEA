@@ -1,5 +1,17 @@
-% Mesh convergence study for a 2D static cantilever beam Finite Element
-% model
+% Mesh convergence study
+%
+% This script performs a mesh convergence study for a 2D static cantilever
+% beam Finite Element model.
+%
+% Author: Kerstin Vater, MSc
+% Machine Learning Dynamics Group (M-14)
+% Hamburg University of Technology
+% Am Schwarzenberg-Campus 1
+% 21073 Hamburg, Germany
+% E-mail: kerstin.vater@tuhh.de  
+% URL: https://www.tuhh.de/dyn
+
+%------------- BEGIN CODE --------------
 
 %% Initialization
 clear
@@ -144,3 +156,5 @@ xlim([0. 2.2])
 ylim([-0.06 0.06])
 grid on
 ax.DataAspectRatio = [1 0.1 0.1];
+
+%------------- END OF CODE --------------

@@ -1,6 +1,20 @@
 % Generation of training and test data for neural network regression
 %
-% Note: requires function getFrictionForce.m
+% This script generates training and test data sets based on analytical
+% friction models. The data is used to fit a regression neural network
+% model and assess its performance.
+%
+% Requires: function getFrictionForce.m
+%
+% Author: Kerstin Vater, MSc
+% Machine Learning Dynamics Group (M-14)
+% Hamburg University of Technology
+% Am Schwarzenberg-Campus 1
+% 21073 Hamburg, Germany
+% E-mail: kerstin.vater@tuhh.de  
+% URL: https://www.tuhh.de/dyn
+
+%------------- BEGIN CODE --------------
 
 clear
 close all
@@ -66,6 +80,8 @@ idxTrain  = training(c); % Training set indices
 idxTest   = test    (c); % Test set indices
 dataTrain = dataFull(idxTrain, :);
 dataTest  = dataFull(idxTest , :);
+
+fprintf("Friction data generation completed.\n");
 
 % Plot the data samples
 ax = subplot(1,4,[1:2]);
@@ -141,3 +157,5 @@ summary(dataFull)
 writetable(dataFull,  fmodel.type + "_friction_model_samples_full.csv")
 writetable(dataTrain, fmodel.type + "_friction_model_samples_training.csv")
 writetable(dataTest,  fmodel.type + "_friction_model_samples_test.csv")
+
+%------------- END OF CODE --------------

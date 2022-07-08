@@ -1,6 +1,19 @@
-% Analytical friction model parametrization and visualization
+% Analytical friction models
 %
-% Note: requires function getFrictionForce.m
+% This script visualizes the analytical friction models to be represented
+% by regression neural network models later on.
+%
+% Requires: function getFrictionForce.m
+%
+% Author: Kerstin Vater, MSc
+% Machine Learning Dynamics Group (M-14)
+% Hamburg University of Technology
+% Am Schwarzenberg-Campus 1
+% 21073 Hamburg, Germany
+% E-mail: kerstin.vater@tuhh.de  
+% URL: https://www.tuhh.de/dyn
+
+%------------- BEGIN CODE --------------
 
 clear
 close all
@@ -131,3 +144,5 @@ plot(vs, -Fn*fmodel.mus*ones(size(vs)), '--')
 ylim([-1.2*Fcrit, 1.2*Fcrit])
 yticks([-Fn*fmodel.mus, -Fn*fmodel.muk, Fn*fmodel.muk, Fn*fmodel.mus])
 yticklabels({'-F_n \mu_s', '-F_n \mu_k', 'F_n \mu_k', 'F_n \mu_s'})
+
+%------------- END OF CODE --------------
