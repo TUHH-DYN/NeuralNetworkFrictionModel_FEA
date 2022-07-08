@@ -19,8 +19,8 @@ dataTrain = readtable("exponential_friction_model_samples_training.csv");
 dataTest  = readtable("exponential_friction_model_samples_test.csv");
 
 %% Train regression neural network
-%  Train an optimized regression neural network model using the training
-%  data set and the test data set for validation purposes
+% Train an optimized regression neural network model using the training
+% data set and the test data set for validation purposes
 
 rng("default") % For reproducibility
 
@@ -32,6 +32,8 @@ rnet = fitrnet(dataTrain, "Ff", ...
     "Standardize",  true, ...
     "StoreHistory", true, ...
     "Verbose",      true);
+
+fprintf("\nTraining completed.\n\n");
 
 % Set up figure
 figure
@@ -54,7 +56,7 @@ grid on
 
 % Compute the test set mean squared error (MSE)
 testMSE = loss(rnet, dataTest, "Ff");
-fprintf('The mean squared error of the regression model on the test data set is %6.4f.\n', testMSE);
+fprintf('The mean squared error (MSE) of the regression model on the test data set is %6.4f.\n', testMSE);
 
 % Compare the predicted test set response values to the true response values
 % Note: a good model produces predictions that are scattered near the line
@@ -83,7 +85,12 @@ ylabel("Friction force residuals")
 legend("Predicted", "True", "Location", "southeast")
 grid on
 
-% -- ecpdf
+% Compute the coefficient of determination (R-squared)
+% Note: a good model yields an R-squared value close to 1
+testR2 = 1 - sum(residuals.^2) / sum((dataTest.Ff - mean(dataTest.Ff)).^2);
+fprintf('The coefficient of determination (R-squared) of the regression model on the test data set is %6.4f.\n', testR2);
+
+% Plot empirical Cumulative Distribution Function (eCDF)
 subplot(2,2,4)
 cdfplot(testPredictions);
 hold on;
