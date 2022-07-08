@@ -26,7 +26,7 @@ set(0, "DefaultAxesColorOrder", Set1)
 
 % Set some parameter values
 hmax    = 0.02; % Target maximum element edge size  [m]
-tfinal  = 1.30; % Final time                        [s]
+tfinal  = 0.13; % Final time                        [s]
 beta    = 1e-2; % Damping
 
 %% Define friction model
@@ -36,7 +36,14 @@ vbelt       = 0.02;         % Belt velocity [m/s]
 Fn          = 100.0;        % Normal force  [N]
 
 % Define friction model
-fmodel.type = 'exponential';
+fmodel.type = 'nn';
+
+if strcmp(fmodel.type, 'nn')
+    % Load fit neural network model
+    model = load("trained_regression_nn_friction_model.mat");
+    fmodel.trainedModel.RegressionNeuralNetwork = model.rnet;
+end
+
 fmodel.a    = 5.0;          % Control parameter for the negative gradient of the friction curve
 fmodel.v0   = 0.3;          % Reference velocity if exponential decay is used
 fmodel.mus  = 0.5;          % Static coefficient of friction
@@ -57,6 +64,35 @@ y = [-h/2; -h/2; h/2; h/2];
 
 g = decsg([3, 4, x' y']');
 
+%% Modal analysis
+%  Modal results may be used for time integration during the slip phase in
+%  order to avoid the occurence of (spurious) high-frequency vibration
+%  components.
+
+% Create modal analysis model for 2-D plane-stress problem
+modelModal = createpde('structural', 'modal-planestress');
+
+% Create geometry
+geometryFromEdges(modelModal, g);
+
+% Create mesh
+mesh = generateMesh(modelModal, "Hmax", hmax);
+
+% Define material properties
+E   = 2e11;     % Young's modulus   [Pa]
+nu  = 0.3;      % Poisson's ratio   [-]
+rho = 1000.;    % Mass density      [kg/m^3]
+
+structuralProperties(modelModal, "YoungsModulus", E, "PoissonsRatio", nu, "MassDensity", rho);
+
+% Specify left edge of the beam as fixed boundary
+structuralBC(modelModal, "Edge", 4, "Constraint", "fixed");
+
+% Solve problem for given frequency range
+modalRes = solve(modelModal, 'FrequencyRange', [-0.1, 1e4]');
+
+fprintf('Modal analysis completed.\n');
+
 %% Static analysis
 %  Static results may be used as an initial condition for the Finite
 %  Element model according to a state just before the first stick-slip
@@ -69,11 +105,9 @@ fprintf('\nPerforming static analysis of the cantilever beam Finite Element mode
 % Create static analysis model for 2-D plane-stress problem
 modelStatic = createpde('structural', 'static-planestress');
 
-% Create geometry
+% Use same geometry and mesh
 geometryFromEdges(modelStatic, g);
-
-% Create mesh
-mesh = generateMesh(modelStatic, "Hmax", hmax);
+modelStatic.Mesh = mesh;
 
 % Define material properties
 E   = 2e11;     % Young's modulus   [Pa]
@@ -143,7 +177,7 @@ for dt = dtVec
     structuralIC(modelTransient, staticRes); % Initial deflection from static results
 
     % Introduce damping
-    damping = structuralDamping(modelTransient, "Beta", beta);
+%     damping = structuralDamping(modelTransient, "Beta", beta);
 
     % Set up time stepping
     tStart  = 0.0;
@@ -169,7 +203,11 @@ for dt = dtVec
         tListTmp = [step-1 step] .* tStep;
     
         % Solve structural model for current time fraction
-        rhs = solve(modelTransient, tListTmp);
+        if slip == false
+            rhs = solve(modelTransient, tListTmp);
+        else
+            rhs = solve(modelTransient, tListTmp, "ModalResults", modalRes);
+        end
     
         % Append partial solution to global solution vectors
         history.t (step+1) = rhs.SolutionTimes(end);
@@ -271,25 +309,25 @@ xlim([0.004 0.0096])
 ylim([-0.12 0.04])
 
 % Plot convergence behavior for stick-slip transition points
-ax = subplot(2,2,3);
-FreactTrans = transitionPoints(transitionPoints < -45);
-FreactErr = abs(abs(FreactTrans) - Fcrit) ./ abs(Fcrit) * 100;
-plot(ceil(tfinal ./ dtVec), FreactErr);
-xlabel("n_{steps} [-]")
-ylabel("e_{rel} [%]")
-title({'Stick-slip transition points error'})
-grid on
-legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
+% ax = subplot(2,2,3);
+% FreactTrans = transitionPoints(transitionPoints < -45);
+% FreactErr = abs(abs(FreactTrans) - Fcrit) ./ abs(Fcrit) * 100;
+% plot(ceil(tfinal ./ dtVec), FreactErr);
+% xlabel("n_{steps} [-]")
+% ylabel("e_{rel} [%]")
+% title({'Stick-slip transition points error'})
+% grid on
+% legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
 
 % Plot convergence behavior for slip-stick transition points
-ax = subplot(2,2,4);
-vrelTrans = transitionPoints(transitionPoints > -1);
-vrelErr = abs(vrelTrans) * 100;
-plot(ceil(tfinal ./ dtVec), vrelErr);
-xlabel("n_{steps} [-]")
-ylabel("e_{rel}=|v_s^t| [%]")
-title({'Slip-stick transition points error'})
-grid on
-legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
+% ax = subplot(2,2,4);
+% vrelTrans = transitionPoints(transitionPoints > -1);
+% vrelErr = abs(vrelTrans) * 100;
+% plot(ceil(tfinal ./ dtVec), vrelErr);
+% xlabel("n_{steps} [-]")
+% ylabel("e_{rel}=|v_s^t| [%]")
+% title({'Slip-stick transition points error'})
+% grid on
+% legend("1st trans.", "2nd trans.", "3rd trans.", "4th trans.")
 
 %------------- END OF CODE --------------

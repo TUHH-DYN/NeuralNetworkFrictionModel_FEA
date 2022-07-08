@@ -30,6 +30,9 @@ dataFull  = readtable("exponential_friction_model_samples_full.csv");
 dataTrain = readtable("exponential_friction_model_samples_training.csv");
 dataTest  = readtable("exponential_friction_model_samples_test.csv");
 
+% Load optimized neural network model parameters
+optimizedModelParams = load("optimized_nn_model_parameters.mat");
+
 %% Train regression neural network
 % Train an optimized regression neural network model using the training
 % data set and the test data set for validation purposes
