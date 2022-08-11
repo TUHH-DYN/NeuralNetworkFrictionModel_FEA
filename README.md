@@ -5,6 +5,6 @@ by Kerstin Vater, Merten Stender, Nobert Hoffmann
 Corresponding author: Kerstin Vater (kerstin.vater@tuhh.de) 
 
 We share the code along our contribution 'Towards Neural Networks in Finite Element Simulations
-for Friction-Excited Systems' to the **GAMM Annual Meeting 2022**. 
+for Friction-Excited Systems' to the **GAMM Annual Meeting 2022** from August 15-19 in Aachen, Germany. 
 
 We will link the proceeding paper as soon as it is published.
