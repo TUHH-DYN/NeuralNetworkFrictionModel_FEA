@@ -15,8 +15,8 @@
 
 %------------- BEGIN CODE --------------
 
-clear
-close all
+% clear
+% close all
 
 % Load custom colormaps
 load("colors\viridis.mat")
@@ -29,7 +29,7 @@ dataTest  = readtable("exponential_friction_model_samples_test.csv");
 
 %% Consider vanilla type regression neural network
 
-rng("default") % For reproducibility
+rng("default") % Restore the random number generator seed for reproducibility
 
 % Create vanilla (default) regression neural network model
 vanillarnet = fitrnet(dataTrain, "Ff");
@@ -57,7 +57,7 @@ fprintf('The mean squared error of the vanilla model on the test data set is %6.
 %  quasi-Newton algorithm (LBFGS) as its loss function minimization
 %  technique, where the software minimizes the mean squared error (MSE).
 
-rng("default") % For reproducibility
+rng("default") % Restore the random number generator seed for reproducibility
 
 optrnet = fitrnet(dataTrain, "Ff", ...
     "OptimizeHyperparameters", "auto", ...  
@@ -69,11 +69,17 @@ optrnet = fitrnet(dataTrain, "Ff", ...
 
 % The hyperparameter optimization should yield the following regression
 % neural network model:
-% optrnet = 
+% optrnet (1) = 
 %   RegressionNeuralNetwork
 %               Activations: 'tanh'
 %                    Lambda: 4.534e-05
 %                LayerSizes: [3 296]
+%               Standardize: true
+% optrnet (2) = 
+%   RegressionNeuralNetwork
+%               Activations: 'relu'
+%                    Lambda: 0.00022917
+%                LayerSizes: [3 275]
 %               Standardize: true
 
 % Compute the mean squared error of the optimized model on the test data set

@@ -16,8 +16,8 @@
 
 %------------- BEGIN CODE --------------
 
-clear
-close all
+% clear
+% close all
 
 % Load custom colormaps
 load("colors\viridis.mat")
@@ -32,7 +32,7 @@ set(gcf, "WindowState", "maximized")
 % Set target normal force [N]
 Fn = 100.0;
 
-% Set number of data samples
+% Set (approximate) number of data samples
 nsamp = 5000;
 
 % Set holdout value for data partitioning training/test
@@ -41,12 +41,14 @@ holdout = 0.3;
 % Generate sample points for the relative sliding velocity according to
 % Gaussian distribution with zero mean in order to capture the friction
 % force discontinuity at the origin
-rng("default") % For reproducibility
-vs = normrnd(0, 0.5, [1, nsamp])';
+rng("default") % Restore the random number generator seed for reproducibility
+vs = normrnd(0, 0.1, [1, nsamp])';
+vs = vs(abs(vs)>1e-4); % Exclude velocity values less than eps
 
 % Generate sample points for the normal force according to uniform
 % distribution around the target value of the noraml force
-Fn = unifrnd(0.98*Fn, 1.02*Fn, [1, nsamp])';
+rng("default")
+Fn = unifrnd(0.98*Fn, 1.02*Fn, size(vs));
 
 % Set common friction parameters
 fmodel.mus = 0.5; % Static coefficient of friction
@@ -62,6 +64,7 @@ Ff = getFrictionForce(Fn, vs, fmodel);
 
 % Add some (normal distributed, zero mean) noise
 sigma = 0.02; % Standard deviation
+rng("default")
 Ff = Ff + (sigma .* Ff) .* randn(size(Ff));
 
 % Assemble data tables
@@ -84,14 +87,14 @@ dataTest  = dataFull(idxTest , :);
 fprintf("Friction data generation completed.\n");
 
 % Plot the data samples
-ax = subplot(1,4,[1:2]);
+figure
 scatter3(dataTrain.Fn, dataTrain.vs, dataTrain.Ff, "Marker", ".")
 hold on
 scatter3(dataTest.Fn, dataTest.vs, dataTest.Ff, "Marker", ".")
 xlabel("F_n [N]");
 ylabel("v_{s} [m/s]");
 zlabel("F_f [N]");
-title("Exponential friction model")
+title("Exponential Friction Model")
 view([110 15])
 
 % Add analytical surface plot as reference
@@ -104,14 +107,15 @@ legend("Training data (" + num2str((1-holdout)*100) + " %)", ...
            "Analytical friction model", "Location", "northeast")
 
 % Plot histogram
-ax = subplot(1,4,3);
+figure
+ax = subplot(1,2,1);
 
 % -- ecpdf
 cdfplot(dataFull.vs); hold on; 
 cdfplot(dataTrain.vs); 
 cdfplot(dataTest.vs);
-ylabel('emperical cumulative probability [-]');
-title('inputs')
+ylabel('Empirical cumulative probability [-]');
+title('Inputs')
 
 % -- envelope of histogram
 % [counts, edges] = histcounts(dataFull.vs, 50, 'Normalization', "probability"); locs = movmean(edges, 2, 'Endpoints', 'discard');
@@ -135,14 +139,14 @@ legend("Entire data set (100 %)", ...
         "Test data (" + num2str(   holdout *100) + " %)", ...
         "Location", "northwest")
 
-ax = subplot(1,4,4);
+ax = subplot(1,2,2);
 
 % -- ecpdf
 cdfplot(dataFull.Ff); hold on; 
 cdfplot(dataTrain.Ff); 
 cdfplot(dataTest.Ff);
-ylabel('emperical cumulative probability [-]');
-title('outputs')
+ylabel('Empirical cumulative probability [-]');
+title('Outputs')
 xlabel("F_{f} [N]");
 legend("Entire data set (100 %)", ...
     "Training data (" + num2str((1-holdout)*100) + " %)", ...

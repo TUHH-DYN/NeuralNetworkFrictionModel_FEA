@@ -17,8 +17,8 @@
 
 %------------- BEGIN CODE --------------
 
-clear
-close all
+% clear
+% close all
 
 % Load custom colormaps
 load("colors\viridis.mat")
@@ -30,20 +30,20 @@ dataFull  = readtable("exponential_friction_model_samples_full.csv");
 dataTrain = readtable("exponential_friction_model_samples_training.csv");
 dataTest  = readtable("exponential_friction_model_samples_test.csv");
 
-% Load optimized neural network model parameters
-optimizedModelParams = load("optimized_nn_model_parameters.mat");
+% TODO Load optimized neural network model parameters
+% optimizedModelParams = load("optimized_nn_model_parameters.mat");
 
 %% Train regression neural network
 % Train an optimized regression neural network model using the training
 % data set and the test data set for validation purposes
 
-rng("default") % For reproducibility
+rng("default") % Restore the random number generator seed for reproducibility
 
 rnet = fitrnet(dataTrain, "Ff", ...
     "ValidationData", dataTest, ...
     "Activations",  "tanh", ...
-    "Lambda",       4.534e-05, ...
-    "LayerSizes",   [3 296], ...
+    "Lambda",       0.004, ...
+    "LayerSizes",   [75 75 75], ...
     "Standardize",  true, ...
     "StoreHistory", true, ...
     "Verbose",      true);
@@ -60,7 +60,7 @@ iteration = rnet.TrainingHistory.Iteration;
 trainLosses = rnet.TrainingHistory.TrainingLoss;
 valLosses = rnet.TrainingHistory.ValidationLoss;
 subplot(2,2,1)
-plot(iteration, trainLosses, iteration, valLosses)
+semilogy(iteration, trainLosses, iteration, valLosses)
 legend(["Training", "Test"])
 title("Training History")
 xlabel("Iteration")
@@ -114,28 +114,6 @@ ylabel('Empirical cumulative probability');
 xlabel("Friction force");
 legend("Predicted", "True", "Location", "southeast")
 
-%% Perform 5-fold cross-validation
-
-rng("default") % For reproducibility
-
-% Train an optimized regression neural network model using the full data set
-cvrnet = fitrnet(dataFull, "Ff", ...
-    "Activations",  "tanh", ...
-    "Lambda",       4.534e-05, ...
-    "LayerSizes",   [3 296], ...
-    "Standardize",  true);
-
-partitionedModel = crossval(cvrnet, 'KFold', 5);
-
-% Compute regression loss for observations not used for training
-kfLoss = kfoldLoss(partitionedModel, "Mode", "individual", "LossFun", "mse");
-
-% Compute max value, mean value and standard deviation of loss values
-fprintf("\n5-fold cross-validation completed.\n")
-fprintf("Maximum loss = %6.4f\n", max(kfLoss));
-fprintf("Mean loss = %6.4f\n", mean(kfLoss));
-fprintf("Standard deviation of loss values = %6.4f\n", std(kfLoss));
-fprintf("Validation RMSE = %6.4f\n", sqrt(mean(kfLoss)));
 
 %% Sample and plot predicted friction force
 
@@ -170,10 +148,10 @@ hold on
 plot(vs, muRef)
 plot(vs, +fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
 plot(vs, -fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
-title('Exponential friction model')
+title('Coefficient of Friction')
 xlabel('v_{s} [m/s]')
 ylabel('\mu [-]')
-xlim([0.0, max(vs)])
+xlim([0.0, 0.1]) % xlim([0.0, max(vs)])
 ylim([0.0, 1.2*fmodel.mus])
 grid on
 
@@ -194,9 +172,10 @@ hold on
 plot(vs, FfRef)
 plot(vs, +Fn*fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
 plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
+title('Friction Force')
 xlabel('v_{s} [m/s]')
 ylabel('F_{f} [N]')
-xlim([min(vs), max(vs)])
+xlim([-0.07, 0.07]) % xlim([min(vs), max(vs)])
 ylim([-1.2*Fcrit, 1.2*Fcrit])
 grid on
 
@@ -210,8 +189,52 @@ yticks([-Fn*fmodel.mus, -Fn*fmodel.muk, Fn*fmodel.muk, Fn*fmodel.mus])
 yticklabels({'-F_n \mu_s', '-F_n \mu_k', 'F_n \mu_k', 'F_n \mu_s'})
 legend("Neural network", "Analytical", "Location", "southeast")
 
-subplot(2,2,2)
-title("Polynomial friction model (t.b.c.)")
+subplot(2,2,4)
+plot(vs, Ff)
+hold on
+plot(vs, FfRef)
+plot(vs, +Fn*fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
+plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--', 'Color', Set1(end,:))
+title('Friction Force (Closeup)')
+xlabel('v_{s} [m/s]')
+ylabel('F_{f} [N]')
+xlim([-5e-3, 5e-3])
+ylim([-1.2*Fcrit, 1.2*Fcrit])
+grid on
+
+yyaxis right
+plot(vs, +Fn*fmodel.muk*ones(size(vs)), '--')
+plot(vs, -Fn*fmodel.muk*ones(size(vs)), '--')
+plot(vs, +Fn*fmodel.mus*ones(size(vs)), '--')
+plot(vs, -Fn*fmodel.mus*ones(size(vs)), '--')
+ylim([-1.2*Fcrit, 1.2*Fcrit])
+yticks([-Fn*fmodel.mus, -Fn*fmodel.muk, Fn*fmodel.muk, Fn*fmodel.mus])
+yticklabels({'-F_n \mu_s', '-F_n \mu_k', 'F_n \mu_k', 'F_n \mu_s'})
+legend("Neural network", "Analytical", "Location", "southeast")
+
+%% Perform 5-fold cross-validation
+
+rng("default") % Restore the random number generator seed for reproducibility
+
+% Train an optimized regression neural network model using the full data set
+cvrnet = fitrnet(dataFull, "Ff", ...
+    "Activations",  "tanh", ...
+    "Lambda",       0.004, ...
+    "LayerSizes",   [75 75 75], ...
+    "Standardize",  true);
+
+partitionedModel = crossval(cvrnet, 'KFold', 5);
+
+% Compute regression loss for observations not used for training
+kfLoss = kfoldLoss(partitionedModel, "Mode", "individual", "LossFun", "mse");
+
+% Compute max value, mean value and standard deviation of loss values
+fprintf("\n5-fold cross-validation completed.\n")
+fprintf("Maximum loss = %6.4f\n", max(kfLoss));
+fprintf("Mean loss = %6.4f\n", mean(kfLoss));
+fprintf("Standard deviation of loss values = %6.4f\n", std(kfLoss));
+fprintf("Validation RMSE = %6.4f\n", sqrt(mean(kfLoss)));
+
 
 %% Export final regression neural network friction model
 save("trained_regression_nn_friction_model.mat", "rnet");

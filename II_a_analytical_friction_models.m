@@ -15,8 +15,8 @@
 
 %------------- BEGIN CODE --------------
 
-clear
-close all
+% clear
+% close all
 
 % Load custom colormaps
 load("colors\viridis.mat")
