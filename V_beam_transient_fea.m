@@ -39,7 +39,7 @@ vbelt       = 0.02;         % Belt velocity [m/s]
 Fn          = 100.0;        % Normal force  [N]
 
 % Define friction model
-fmodel.type = 'exponential';
+fmodel.type = 'nn';
 
 if strcmp(fmodel.type, 'nn')
     % Load fit neural network model

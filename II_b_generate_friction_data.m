@@ -77,7 +77,7 @@ dataFull.Properties.VariableDescriptions{'vs'} = 'Relative sliding velocity';
 dataFull.Properties.VariableDescriptions{'Ff'} = 'Kinetic friction force';
 
 % Split the data into training and test set
-rng("default") % For reproducibility of the data partition
+% rng("default") % For reproducibility of the data partition
 c = cvpartition(height(dataFull), "HoldOut", holdout);
 idxTrain  = training(c); % Training set indices
 idxTest   = test    (c); % Test set indices
@@ -111,8 +111,8 @@ figure
 ax = subplot(1,2,1);
 
 % -- ecpdf
-cdfplot(dataFull.vs); hold on; 
-cdfplot(dataTrain.vs); 
+cdfplot(dataFull.vs); hold on;
+cdfplot(dataTrain.vs);
 cdfplot(dataTest.vs);
 ylabel('Empirical cumulative probability [-]');
 title('Inputs')
